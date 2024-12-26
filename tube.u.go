@@ -3,10 +3,11 @@ history:
 20/0410 v1
 20/1106 migrate to github.com/kkdai/youtube/v2
 
-go get -u -a -v
-go get -u -v github.com/kkdai/youtube/v2
-
-GoFmt GoBuildNull GoBuild GoRelease GoRun
+GoGet
+GoFmt
+GoBuildNull
+GoBuild
+GoRun
 */
 
 package main
@@ -290,15 +291,20 @@ func ytDownToFile(ytid, fpath string) error {
 			if !strings.HasPrefix(f.MimeType, "video/") {
 				continue
 			}
-			if !strings.HasPrefix(f.MimeType, "video/mp4") || f.QualityLabel == "" || f.AudioQuality == "" {
+			if !strings.HasPrefix(f.MimeType, "video/mp4") {
 				continue
 			}
+			//if f.AudioQuality == "" {
+			//	continue
+			//}
 			if f.Bitrate > streamfmt.Bitrate {
-				//fmt.Fprintf(os.Stderr, "Trying stream itag=%v \n", f.ItagNo)
-				if _, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &f); err == nil && streamsize > 0 {
-					streamfext = "m4v"
-					streamfmt = f
-				}
+				//fmt.Fprintf(os.Stderr, "checking stream itag=%v \n", f.ItagNo)
+				//if _, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &f); err == nil && streamsize > 0 {
+				streamfext = fmt.Sprintf("%dp..mp4", f.Height)
+				streamfmt = f
+				//} else {
+				//	fmt.Fprintf(os.Stderr, "streamsize:%d  err:%s"+NL, streamsize, err)
+				//}
 			}
 		}
 	} else {
@@ -306,7 +312,7 @@ func ytDownToFile(ytid, fpath string) error {
 			if !strings.HasPrefix(f.MimeType, "audio/") {
 				continue
 			}
-			fmt.Fprintf(os.Stderr, "mimetype: %s"+NL, f.MimeType)
+			//fmt.Fprintf(os.Stderr, "mimetype: %s"+NL, f.MimeType)
 			var fext string
 			if strings.HasPrefix(f.MimeType, "audio/mp4") {
 				fext = "m4a"
@@ -316,28 +322,32 @@ func ytDownToFile(ytid, fpath string) error {
 				continue
 			}
 			if f.Bitrate > streamfmt.Bitrate {
-				if _, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &streamfmt); err == nil && streamsize > 0 {
-					streamfext = fext
-					streamfmt = f
-				}
+				//fmt.Fprintf(os.Stderr, "checking stream itag=%v \n", f.ItagNo)
+				//if _, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &streamfmt); err == nil && streamsize > 0 {
+				streamfext = fext
+				streamfmt = f
+				//} else {
+				//	fmt.Fprintf(os.Stderr, "streamsize:%d  err:%s"+NL, streamsize, err)
+				//}
 			}
 		}
 	}
 
 	if streamfmt.ItagNo == 0 {
-		return fmt.Errorf("could not find a working stream")
+		return fmt.Errorf("could not find a stream for downloading")
 	}
 
-	fpath = fmt.Sprintf("%s%s.%s", fpath, title, streamfext)
+	fpath = fmt.Sprintf("%s%s..%s", fpath, title, streamfext)
 
 	fmt.Fprintln(os.Stderr, fpath)
 
 	if fstat, err := os.Stat(fpath); !os.IsNotExist(err) && fstat.Size() > 0 {
+		// the file is there already
 		return nil
 	}
 
 	streamrc, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &streamfmt)
-	//fmt.Fprintf(os.Stderr, "Chose stream itag=%v mimetype=%s size=%v err=%v\n", streamfmt.ItagNo, streamfmt.MimeType, streamsize, err)
+	//fmt.Fprintf(os.Stderr, "downloading stream itag=%v mimetype=%s size=%v err=%v\n", streamfmt.ItagNo, streamfmt.MimeType, streamsize, err)
 	if err != nil {
 		return err
 	}
@@ -347,6 +357,7 @@ func ytDownToFile(ytid, fpath string) error {
 	defer streamrc.Close()
 
 	var streambuf bytes.Buffer
+	defer streambuf.Reset()
 	_, err = io.Copy(&streambuf, streamrc)
 	if err != nil {
 		return err
