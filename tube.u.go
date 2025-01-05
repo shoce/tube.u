@@ -163,6 +163,13 @@ func safestring(s string) (t string) {
 		t = t + string(r)
 	}
 
+	for strings.Contains(t, "...") {
+		t = strings.ReplaceAll(t, "...", "..")
+	}
+
+	t = strings.TrimLeft(t, ".")
+	t = strings.TrimRight(t, ".")
+
 	if len([]rune(t)) > TitleMaxLen {
 		t = string([]rune(t)[:TitleMaxLen])
 	}
