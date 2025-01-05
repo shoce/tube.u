@@ -295,10 +295,10 @@ func ytDownToFile(ytid, fpath string) error {
 	var streamfmt yt.Format
 	if DownloadVideo {
 		for _, f := range vinfo.Formats {
-			if !strings.HasPrefix(f.MimeType, "video/") {
+			if !strings.HasPrefix(f.MimeType, "video/mp4") {
 				continue
 			}
-			if !strings.HasPrefix(f.MimeType, "video/mp4") {
+			if !strings.HasPrefix(f.MimeType, `video/mp4; codecs="avc1.`) {
 				continue
 			}
 			//if f.AudioQuality == "" {
@@ -307,7 +307,7 @@ func ytDownToFile(ytid, fpath string) error {
 			if f.Bitrate > streamfmt.Bitrate {
 				//fmt.Fprintf(os.Stderr, "checking stream itag=%v \n", f.ItagNo)
 				//if _, streamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &f); err == nil && streamsize > 0 {
-				streamfext = fmt.Sprintf("%dp..mp4", f.Height)
+				streamfext = fmt.Sprintf("%s..mp4", f.QualityLabel)
 				streamfmt = f
 				//} else {
 				//	fmt.Fprintf(os.Stderr, "streamsize:%d  err:%s"+NL, streamsize, err)
