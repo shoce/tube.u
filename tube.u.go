@@ -3,11 +3,8 @@ history:
 20/0410 v1
 20/1106 migrate to github.com/kkdai/youtube/v2
 
-GoGet
-GoFmt
-GoBuildNull
-GoBuild
-GoRun
+GoGet GoFmt GoBuildNull
+GoBuild GoRun
 */
 
 package main
@@ -45,12 +42,10 @@ var (
 	YtCl       yt.Client
 	replacer   *strings.Replacer
 
-	youtubeRe, youtuRe, youtubeListRe, youtuListRe *regexp.Regexp
+	youtubeRe, youtubeListRe *regexp.Regexp
 
-	YoutubeREString     = `youtube.com/watch\?v=([0-9A-Za-z_-]+)`
-	YoutuREString       = `youtu.be/([0-9A-Za-z_-]+)$`
-	YoutubeListReString = `youtube.com/.*[?&]list=([0-9A-Za-z_-]+)$`
-	YoutuListReString   = `youtu.be/.*[?&]list=([0-9A-Za-z_-]+)$`
+	YoutubeREString     = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/watch/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
+	YoutubeListReString = `(?:youtube.com|youtu.be)/.*[?&]list=([0-9A-Za-z_-]+)$`
 
 	ConfigPath = "$HOME/config/youtube.keys"
 	YtKey      string
@@ -100,9 +95,7 @@ func init() {
 	Ctx = context.TODO()
 	YtCl = yt.Client{HTTPClient: &http.Client{}}
 	youtubeRe = regexp.MustCompile(YoutubeREString)
-	youtuRe = regexp.MustCompile(YoutuREString)
 	youtubeListRe = regexp.MustCompile(YoutubeListReString)
-	youtuListRe = regexp.MustCompile(YoutuListReString)
 
 	if path.Base(os.Args[0]) == "tube.v" {
 		DownloadVideo = true
@@ -205,15 +198,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
-	} else if mm = youtuListRe.FindStringSubmatch(ytid); len(mm) > 1 {
-		videos, err = getList(mm[1], NamePrefix)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
-		}
 	} else if mm = youtubeRe.FindStringSubmatch(ytid); len(mm) > 1 {
-		videos = []YtVideo{YtVideo{Id: mm[1], NamePrefix: NamePrefix}}
-	} else if mm = youtuRe.FindStringSubmatch(ytid); len(mm) > 1 {
 		videos = []YtVideo{YtVideo{Id: mm[1], NamePrefix: NamePrefix}}
 	}
 
