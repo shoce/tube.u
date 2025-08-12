@@ -9,29 +9,45 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      # https://github.com/actions/checkout/
-      - uses: actions/checkout@v4
-      - name: version
-        run: |
-          VERSION=$( date '+%y.%m%d.%H%M' )
-          echo "VERSION:$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - uses: shoce/action-version@v1
+
+       # https://github.com/actions/checkout/
+      - uses: actions/checkout@v5
+
       # https://github.com/actions/setup-go/
       - uses: actions/setup-go@v5
         with:
           # https://go.dev/dl/
-          go-version: '^1.23.4'
+          go-version: '^1.24.6'
+
       - name: go build
         run: GOOS=linux GOARCH=amd64 go build -o ${{ github.event.repository.name }}.linux.amd64 -trimpath -ldflags '-X main.Version='$VERSION
+
       - name: gzip
         run: gzip -k ${{ github.event.repository.name }}.linux.amd64
+
       - name: list files
         run: ls -l -a
+
       - name: release notes
         run: echo 'curl -sSL https://github.com/shoce/${{ github.event.repository.name }}/releases/latest/download/${{ github.event.repository.name }}.linux.amd64.gz | gunzip | put /bin/${{ github.event.repository.name }} 755' >release.notes..text
+
       - name: gh release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create $VERSION ${{ github.event.repository.name }}.linux.amd64.gz --notes-file release.notes..text
+
+      - name: gh release clean
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(
+            gh release list --order asc --limit 100 --json tagName --jq '.[] | select(.tagName | test("-")) | .tagName' | head -n -2
+          ) ; do
+            gh release delete "$tag" -y
+          done
+
 
